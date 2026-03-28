@@ -708,29 +708,6 @@ Configuration permissive en développement (`Access-Control-Allow-Origin: *`). E
 
 ---
 
-## 10. Performance et Scalabilité
-
-### 10.1 Goulots d'étranglement identifiés
-
-- **Chargement dashboard :** N+1 requêtes LSTM (une par machine). Avec 100 machines, 100 appels HTTP parallèles au ML Service.
-- **Prédictions batch :** Random Forest sur 30 jours de données peut être lent si le volume est important.
-- **Pas de cache :** chaque rechargement du dashboard refait tous les appels.
-
-### 10.2 Optimisations en place
-
-- `Promise.all()` pour les appels LSTM parallèles (non séquentiels)
-- `useMemo` React pour éviter les recalculs frontend
-- Index PostgreSQL sur les colonnes de filtrage fréquent
-- Limite de 100 métriques par requête historique
-- Rafraîchissement toutes les 60s (pas de polling agressif)
-
-### 10.3 Recommandations de scalabilité
-
-- Ajouter Redis pour cacher les prédictions LSTM (TTL 1h)
-- Implémenter WebSocket pour les alertes temps réel
-- Pagination côté serveur pour la liste des machines
-- Partitionnement PostgreSQL sur `system_metrics` par date
-- Load balancer devant plusieurs instances backend
 
 ---
 
@@ -768,31 +745,8 @@ SMTP_PASS=<password>
 OLLAMA_URL=http://localhost:11434
 ```
 
-### 11.4 Pas de CI/CD
 
-Aucun pipeline CI/CD n'est configuré. Déploiement manuel via `docker-compose up --build`.
 
----
-
-## 12. Qualité du Code
-
-### 12.1 Points forts
-
-- Séparation claire controllers / services / models / routes
-- Middleware chain Express bien structuré
-- Gestion d'erreurs centralisée avec Winston
-- Migrations SQL versionnées et idempotentes
-- Fallbacks gracieux à tous les niveaux (SMART, LSTM, Ollama)
-- Commentaires JSDoc sur les fonctions principales
-
-### 12.2 Dette technique identifiée
-
-- URL backend codée en dur dans les composants React (`http://localhost:3000`)
-- Pas de couche service frontend (axios appelé directement dans les composants)
-- CORS wildcard en développement
-- Tokens agents stockés en clair
-- Pas de pagination côté serveur
-- `username` et `full_name` coexistent dans le modèle User (incohérence)
 
 
 
