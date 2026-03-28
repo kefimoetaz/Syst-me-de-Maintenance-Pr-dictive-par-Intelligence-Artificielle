@@ -1,195 +1,349 @@
-# 🖥️ Système de Maintenance Prédictive avec IA
+# 🖥️ Système de Maintenance Prédictive par Intelligence Artificielle
+
+> Plateforme complète de surveillance et maintenance prédictive pour parcs informatiques.
+> Utilise LSTM + Random Forest pour anticiper les pannes matérielles avant qu'elles surviennent.
+
+---
 
 ## 📋 Description
-Système intelligent de surveillance et maintenance prédictive pour parcs informatiques utilisant l'apprentissage automatique pour anticiper les pannes matérielles.
 
-## 🎯 Objectifs
-- Surveillance automatique en temps réel des machines
-- Prédiction des pannes avec Machine Learning (Random Forest)
-- Alertes automatiques par email
-- Dashboard web interactif
-- Réduction des temps d'arrêt et coûts de maintenance
+Ce système collecte en temps réel les métriques système (CPU, RAM, disque) et les données SMART des machines via un agent Python déployé sur chaque poste. Ces données alimentent deux modèles de Machine Learning qui calculent des probabilités de panne à 7, 14 et 30 jours. Un tableau de bord React permet aux techniciens de visualiser l'état du parc, les alertes actives et les prédictions. Un chatbot IA hybride (Ollama + règles déterministes) répond aux questions en langage naturel.
+
+---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────┐      ┌─────────────┐      ┌──────────────┐
-│   Agent     │─────▶│  Backend    │─────▶│  PostgreSQL  │
-│  (Python)   │      │  (Node.js)  │      │   Database   │
-└─────────────┘      └─────────────┘      └──────────────┘
-                            │                      │
-                            ▼                      ▼
-                     ┌─────────────┐      ┌──────────────┐
-                     │  Frontend   │      │  ML Service  │
-                     │   (React)   │      │   (Python)   │
-                     └─────────────┘      └──────────────┘
+┌─────────────┐     HTTP/REST      ┌──────────────────┐
+│   Frontend  │ ◄────────────────► │  Backend API     │
+│  React/Vite │                    │  Node.js/Express │
+│  Port 5173  │                    │  Port 3000       │
+└─────────────┘                    └────────┬─────────┘
+                                            │
+                                   ┌────────▼─────────┐
+                                   │   PostgreSQL DB  │
+                                   │   Port 5432      │
+                                   └────────▲─────────┘
+┌─────────────┐     HTTP/REST      ┌────────┴─────────┐
+│  ML Service │ ◄────────────────► │  Backend (proxy) │
+│  Python/    │                    └──────────────────┘
+│  Flask 5000 │
+└─────────────┘
+       ▲
+┌──────┴──────┐
+│  Agent      │  ← runs on each monitored PC
+│  Python     │
+└─────────────┘
 ```
+
+---
 
 ## 🛠️ Stack Technique
 
-### Frontend
-- **React** 18.3 + **Vite** 5.4
-- **TailwindCSS** 3.4 pour le design
-- **Recharts** pour les graphiques
-- **Axios** pour les appels API
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite 5, TailwindCSS 3, Recharts, Axios |
+| Backend | Node.js 20+, Express 4, Sequelize ORM, Winston |
+| Database | PostgreSQL 14 |
+| ML Service | Python 3.9+, Flask, PyTorch (LSTM), scikit-learn (Random Forest) |
+| Agent | Python 3.9+, psutil, smartctl/pySMART, schedule |
+| Chatbot | Ollama (llama3.2:1b) + deterministic rules |
+| Auth | JWT (users) + Bearer tokens (agents/ML service) |
+| Email | Nodemailer (SMTP) |
+| Deployment | Docker Compose |
 
-### Backend
-- **Node.js** 20+ avec **Express** 4.21
-- **PostgreSQL** 14+ pour la base de données
-- **Sequelize** ORM
-- **JWT** pour l'authentification
-- **Nodemailer** pour les emails
-
-### Agent de Collecte
-- **Python** 3.9+
-- **psutil** pour les métriques système
-- **pySMART** pour les données SMART
-- **schedule** pour la collecte automatique
-
-### Service ML
-- **Python** 3.9+
-- **scikit-learn** 1.7+ (Random Forest)
-- **pandas** & **numpy** pour le traitement
-- **APScheduler** pour les prédictions quotidiennes
+---
 
 ## 📊 Fonctionnalités
 
-### ✅ Implémentées
-- [x] Collecte automatique des métriques (CPU, RAM, Disque)
-- [x] Lecture des données SMART des disques
-- [x] API RESTful complète
-- [x] Dashboard web responsive
-- [x] Prédictions ML avec Random Forest
-- [x] Système d'alertes avec 4 niveaux (LOW, MEDIUM, HIGH, CRITICAL)
-- [x] Notifications email automatiques
-- [x] Gestion de 20 machines
-- [x] 7.8M+ enregistrements de métriques
-- [x] Historique sur 30 jours
+- [x] Collecte automatique CPU, RAM, Disque toutes les heures
+- [x] Lecture données SMART disques (health_status, température, erreurs)
+- [x] Prédiction LSTM — risque temps réel depuis séquences SMART
+- [x] Prédiction Random Forest — probabilité panne 7/14/30 jours
+- [x] Dashboard web responsive avec KPIs, graphiques, tableau machines
+- [x] Système d'alertes ACTIVE → ACKNOWLEDGED → RESOLVED
+- [x] Notifications email automatiques (HIGH/CRITICAL)
+- [x] Chatbot IA en français (Ollama + fallback déterministe)
+- [x] Authentification JWT avec rôles (admin / technician)
+- [x] Gestion utilisateurs (admin uniquement)
+- [x] Export CSV machines et alertes
+- [x] Score Santé calculé en temps réel
+- [x] Détection d'anomalies (Isolation Forest)
+- [x] Déploiement Docker Compose complet
 
-### 🔜 Évolutions Futures
-- [ ] Module d'interventions de maintenance
-- [ ] Historique des interventions
-- [ ] Statistiques avancées
-- [ ] Export de rapports PDF
-- [ ] Application mobile
-- [ ] Intégration avec systèmes de ticketing
+---
 
-## 🚀 Installation et Démarrage
+## 🚀 Installation
 
 ### Prérequis
+
 - Node.js 20+
 - Python 3.9+
 - PostgreSQL 14+
 - Git
 
-### 1. Cloner le projet
+### Option A — Docker (recommandé)
+
 ```bash
 git clone <repository-url>
 cd plateform
+cp .env.example .env
+# Éditez .env avec vos mots de passe
+docker-compose up --build
 ```
 
-### 2. Configuration de la base de données
-```bash
-# Créer la base de données
-createdb -U postgres predictive_maintenance
+Accès : http://localhost:5173
 
-# Exécuter les migrations
+### Option B — Manuel
+
+**Ordre de démarrage obligatoire :** PostgreSQL → Backend → ML Service → Frontend → Agent
+
+#### 1. Base de données
+
+```bash
+createdb -U postgres maintenance_predictive
 cd backend
 npm install
-npm run migrate
-npm run seed
+node src/database/migrate.js
+node src/database/seed.js
 ```
 
-### 3. Démarrer le Backend
+#### 2. Backend
+
 ```bash
 cd backend
-npm install
+# Créez backend/.env (voir section Configuration)
 npm start
-# Backend: http://localhost:3000
+# http://localhost:3000
 ```
 
-### 4. Démarrer le Frontend
+#### 3. ML Service
+
+```bash
+cd ml-service
+pip install -r requirements.txt
+# Créez ml-service/.env (voir section Configuration)
+python create_app.py
+# http://localhost:5000
+```
+
+#### 4. Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
-# Frontend: http://localhost:5173
+# http://localhost:5173
 ```
 
-### 5. Démarrer l'Agent
+#### 5. Agent (sur chaque PC à surveiller)
+
 ```bash
 cd agent
 pip install -r requirements.txt
+# Créez agent/config.json (voir section Configuration)
 python src/main.py
-# Collecte automatique toutes les heures
 ```
 
-### 6. Service ML (Optionnel)
+#### 6. Chatbot IA (optionnel)
+
 ```bash
-cd ml-service
-pip install -r requirements.txt
-python -m src.training_pipeline  # Entraîner le modèle
-python run_predictions_once.py   # Générer des prédictions
+# Installer Ollama depuis https://ollama.com
+ollama pull llama3.2:1b
+ollama serve
+# http://localhost:11434
 ```
 
-## 📱 Utilisation
+---
 
-### Dashboard Web
-Accédez à http://localhost:5173 pour:
-- Voir toutes les machines surveillées
-- Consulter les prédictions de pannes
-- Gérer les alertes
-- Visualiser les graphiques de santé système
+## ⚙️ Configuration
 
-### API REST
-Documentation complète: `backend/API_DOCUMENTATION.md`
+### `backend/.env`
 
-Endpoints principaux:
-- `GET /api/machines` - Liste des machines
-- `GET /api/predictions` - Prédictions ML
-- `GET /api/alerts` - Alertes actives
-- `POST /api/data` - Envoi de métriques (agent)
+```env
+PORT=3000
+NODE_ENV=development
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=maintenance_predictive
+DB_USER=postgres
+DB_PASSWORD=123
+JWT_SECRET=your-super-secret-jwt-key
+API_TOKEN=dev-token-12345
+ML_SERVICE_URL=http://localhost:5000
+ML_SERVICE_TOKEN=dev-token-12345
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@gmail.com
+SMTP_PASS=your-app-password
+OLLAMA_URL=http://localhost:11434
+```
 
-## 📈 Métriques du Projet
+### `ml-service/.env`
 
-- **20 machines** surveillées
-- **7.8M+ enregistrements** de métriques
-- **Collecte automatique** toutes les heures
-- **Prédictions quotidiennes** à 2h00
-- **Alertes en temps réel** pour risques HIGH/CRITICAL
-- **Précision ML**: 50-70% (amélioration avec plus de données)
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=maintenance_predictive
+DB_USER=postgres
+DB_PASSWORD=123
+API_HOST=0.0.0.0
+API_PORT=5000
+API_TOKEN=dev-token-12345
+MODEL_DIR=./models
+LOG_LEVEL=INFO
+```
 
+### `agent/config.json`
 
-## 📚 Documentation
+```json
+{
+  "api_url": "http://localhost:3000/api/data",
+  "agent_id": "550e8400-e29b-41d4-a716-446655440001",
+  "token": "token_support_2024_secure_003",
+  "collection_interval_hours": 1,
+  "log_level": "INFO",
+  "log_file": "agent.log",
+  "max_log_size_mb": 10
+}
+```
 
-- `Guide_Utilisation_PC_Technician_Assistant_Pour_Maintenance_Predictive.md` - Guide utilisateur
-- `Guide_Developpement_Stack_Technique.md` - Guide développeur
-- `MACHINE_SCALING_GUIDE.md` - Guide de scalabilité
-- `ALERT_SYSTEM_SETUP.md` - Configuration des alertes
-- Diagrammes UML dans le dossier racine
+> `agent_id` et `token` doivent correspondre à une ligne dans la table `agents` en base.
+
+---
+
+## 🔑 Identifiants par défaut
+
+| Email | Mot de passe | Rôle |
+|-------|-------------|------|
+| admin@maintenance.com | admin123 | Administrateur |
+| technicien@maintenance.com | tech123 | Technicien |
+
+> Si la connexion échoue : `node backend/create-users.js`
+
+---
+
+## 🧠 Modèles ML
+
+### LSTM (temps réel)
+
+- Analyse les 5 dernières lectures SMART par machine
+- Features : read_errors, write_errors, temperature, health_score
+- Sortie : probabilité 0–1 → LOW / MEDIUM / HIGH
+- Fichier : `ml-service/models/lstm_model.pth`
+
+```bash
+# Entraîner le LSTM
+python train_lstm_schema.py
+```
+
+### Random Forest (batch quotidien)
+
+- Analyse 30 jours de métriques système
+- Sortie : failure_probability_7d / 14d / 30d + risk_level
+- Fichier : `ml-service/models/random_forest_vX.joblib`
+
+```bash
+# Entraîner le Random Forest
+cd ml-service
+python -m src.training_pipeline
+```
+
+> Les modèles entraînés ne sont pas dans le repo (fichiers binaires volumineux).
+> Sans modèle LSTM : affiche "Prédiction indisponible".
+> Sans Random Forest : pas de prédictions dans la table predictions.
+
+---
+
+## 💿 Données SMART (Windows)
+
+L'agent lit la santé réelle des disques via `smartctl`.
+Sans installation, toutes les machines affichent `GOOD / 40°C` (fallback).
+
+**Installation smartmontools :** https://www.smartmontools.org/wiki/Download
+
+Vérification :
+```bash
+smartctl --scan
+smartctl -H /dev/sda -d nvme   # NVMe
+smartctl -H /dev/pd0           # HDD
+```
+
+L'agent détecte automatiquement `C:\Program Files\smartmontools\bin\smartctl.exe`.
+
+---
+
+## 🌱 Données de démo
+
+Pour peupler le dashboard avec des machines de test :
+
+```bash
+cd backend
+node src/database/seed.js                  # données de base
+node seed-diverse-machines.js              # 15 machines variées
+node seed-smart-data-all-machines.js       # historique SMART
+node seed-lstm-model.js                    # enregistrement modèle ML en DB
+```
+
+---
+
+## 🔌 Ports
+
+| Service | Port | URL |
+|---------|------|-----|
+| Frontend | 5173 | http://localhost:5173 |
+| Backend API | 3000 | http://localhost:3000 |
+| ML Service | 5000 | http://localhost:5000 |
+| PostgreSQL | 5432 | localhost:5432 |
+| Ollama | 11434 | http://localhost:11434 |
+
+---
+
+## 📡 API — Endpoints principaux
+
+| Route | Méthode | Auth | Description |
+|-------|---------|------|-------------|
+| `POST /api/auth/login` | POST | — | Connexion utilisateur |
+| `POST /api/data` | POST | Agent token | Envoi métriques agent |
+| `GET /api/dashboard/overview` | GET | JWT | KPIs globaux |
+| `GET /api/dashboard/machines` | GET | JWT | Liste machines + prédictions |
+| `GET /api/ml/lstm/predict/:id` | GET | JWT | Prédiction LSTM temps réel |
+| `GET /api/alerts` | GET | JWT | Liste alertes |
+| `PATCH /api/alerts/:id/acknowledge` | PATCH | JWT | Acquitter alerte |
+| `GET /api/chatbot/ask` | POST | JWT | Question chatbot |
+
+---
 
 ## 🔒 Sécurité
 
-- Authentification par token JWT
-- Validation des entrées API
-- Protection contre les injections SQL (Sequelize ORM)
-- Limitation du taux de requêtes
-- Logs d'audit complets
+- Mots de passe hashés avec bcrypt (rounds: 10)
+- JWT signé avec `JWT_SECRET` (expiration 24h)
+- Tokens agents vérifiés en base de données
+- Payload JSON limité à 1MB
+- Middleware de validation Joi sur les entrées
+- Rôles : admin (accès complet) / technician (lecture + acquittement)
 
-## 🐳 Docker (Optionnel)
+---
+
+## 🐳 Docker
 
 ```bash
-docker-compose up -d
+docker-compose up --build
 ```
 
-Services disponibles:
-- Backend: http://localhost:3000
-- Frontend: http://localhost:3001
-- PostgreSQL: localhost:5432
-- ML Service: http://localhost:5000
+Services : postgres, ml-service, backend, frontend
+Agent optionnel : `docker-compose --profile with-agent up`
 
+---
+
+## 📚 Documentation
+
+| Fichier | Contenu |
+-
+| `PFE_ADVANCED_TECHNICAL_DOCUMENTATION.md` | Analyse technique complète, architecture, sécurité, défense PFE |
+
+---
 
 ## 📄 Licence
 
-Projet académique - Tous droits réservés
-
+Projet académique PFE — Licence Informatique 2025–2026. Tous droits réservés.
