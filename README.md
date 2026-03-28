@@ -159,13 +159,6 @@ Endpoints principaux:
 - **Alertes en temps réel** pour risques HIGH/CRITICAL
 - **Précision ML**: 50-70% (amélioration avec plus de données)
 
-## 🎓 Contexte Académique
-
-**Projet de Fin d'Études (PFE)**
-- **Établissement**: [Votre université]
-- **Année**: 2025-2026
-- **Filière**: Licence en Systèmes Informatiques (LSI)
-- **Encadrant**: [Nom de l'encadrant]
 
 ## 📚 Documentation
 
@@ -195,22 +188,8 @@ Services disponibles:
 - PostgreSQL: localhost:5432
 - ML Service: http://localhost:5000
 
-## 🤝 Contribution
-
-Ce projet est un PFE académique. Pour toute question:
-- Email: [votre-email]
-- GitHub: [votre-github]
 
 ## 📄 Licence
 
 Projet académique - Tous droits réservés
 
-## 🙏 Remerciements
-
-- Encadrant académique
-- Équipe pédagogique LSI
-- Communauté open-source (React, Node.js, scikit-learn)
-
----
-
-**Développé avec ❤️ pour la maintenance prédictive intelligente**
