@@ -104,7 +104,7 @@ def predict_for_machine(machine_id: int) -> dict:
             "prediction": None,
             "risk_level": "UNKNOWN",
             "anomaly": False,
-            "explanation": f"Not enough data for prediction (need {SEQ_LEN}, got {len(rows)})"
+            "explanation": f"Données insuffisantes pour la prédiction (requis : {SEQ_LEN}, disponible : {len(rows)})"
         }
 
     # Build raw feature matrix (SEQ_LEN, N_FEAT)
@@ -140,20 +140,20 @@ def predict_for_machine(machine_id: int) -> dict:
         risk_level  = "HIGH"
         anomaly     = True
         explanation = (
-            "High failure risk detected due to increasing disk errors "
-            "and abnormal SMART metrics trends."
+            "Risque élevé de panne détecté en raison d'une augmentation "
+            "des erreurs disque et de métriques SMART anormales."
         )
     elif prob > 0.5:
         risk_level  = "MEDIUM"
         anomaly     = True
         explanation = (
-            "Moderate failure risk detected. Disk metrics show early "
-            "signs of degradation."
+            "Risque modéré de panne détecté. Les métriques disque montrent "
+            "des signes précoces de dégradation."
         )
     else:
         risk_level  = "LOW"
         anomaly     = False
-        explanation = "Disk metrics are within normal range. No immediate risk detected."
+        explanation = "Les métriques disque sont dans la plage normale. Aucun risque immédiat détecté."
 
     return {
         "prediction": round(prob, 4),

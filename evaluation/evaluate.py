@@ -1,6 +1,6 @@
 """
 Chatbot Evaluation Pipeline
-Computes BLEU and ROUGE scores for the predictive maintenance chatbot.
+Computes ROUGE scores for the predictive maintenance chatbot.
 
 Usage:
     # Against real chatbot (backend must be running on localhost:3000):
@@ -10,19 +10,13 @@ Usage:
     python evaluate.py --mock
 
 Requirements:
-    pip install nltk rouge-score requests
+    pip install rouge-score requests
 """
 
 import json
 import argparse
 import requests
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from rouge_score import rouge_scorer
-import nltk
-
-# Download required NLTK tokenizer data (only needed once)
-nltk.download('punkt', quiet=True)
-nltk.download('punkt_tab', quiet=True)
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -66,7 +60,7 @@ def get_mock_response(question: str) -> str:
         "high et critical": "HIGH signifie risque élevé, CRITICAL signifie risque immédiat.",
         "collecte des métriques": "L'agent Python collecte les métriques CPU, RAM et disque toutes les heures.",
         "données smart": "Les données SMART surveillent la santé des disques durs.",
-        "modèle ml": "Le modèle Random Forest analyse les métriques pour prédire les pannes.",
+        "modèle ml": "Le modèle LSTM analyse les métriques pour prédire les pannes.",
         "cpu dépasse": "Si le CPU dépasse 90%, identifiez les processus consommateurs et optimisez.",
         "prédictions sont-elles mises à jour": "Les prédictions sont mises à jour chaque nuit à 2h00.",
         "réduire le risque": "Effectuez une maintenance préventive et remplacez les composants vieillissants.",
@@ -88,52 +82,36 @@ def get_mock_response(question: str) -> str:
 
 # ─── Scoring ──────────────────────────────────────────────────────────────────
 
-def compute_bleu(reference: str, hypothesis: str) -> float:
-    """
-    Compute sentence-level BLEU score.
-    Uses smoothing to handle short sentences with no n-gram overlap.
-    """
-    ref_tokens = nltk.word_tokenize(reference.lower())
-    hyp_tokens = nltk.word_tokenize(hypothesis.lower())
-
-    # SmoothingFunction avoids zero scores when n-gram matches are missing
-    smoother = SmoothingFunction().method1
-    return sentence_bleu([ref_tokens], hyp_tokens, smoothing_function=smoother)
-
-
 def compute_rouge(reference: str, hypothesis: str) -> dict:
     """
-    Compute ROUGE-1, ROUGE-2, and ROUGE-L F1 scores.
+    Compute ROUGE-1 and ROUGE-2 F1 scores.
     """
-    scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+    scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2'], use_stemmer=True)
     scores = scorer.score(reference, hypothesis)
     return {
         "rouge1": scores['rouge1'].fmeasure,
         "rouge2": scores['rouge2'].fmeasure,
-        "rougeL": scores['rougeL'].fmeasure,
     }
 
 
 # ─── Display ──────────────────────────────────────────────────────────────────
 
-def print_separator(char="─", width=90):
+def print_separator(char="─", width=75):
     print(char * width)
 
 
 def print_results_table(results: list):
     """Print a formatted table of per-question scores."""
     print_separator("═")
-    print(f"{'#':<4} {'Question':<42} {'BLEU':>6} {'R-1':>6} {'R-2':>6} {'R-L':>6}")
+    print(f"{'#':<4} {'Question':<52} {'R-1':>8} {'R-2':>8}")
     print_separator()
 
     for r in results:
-        q_short = r["question"][:40] + ".." if len(r["question"]) > 40 else r["question"]
+        q_short = r["question"][:50] + ".." if len(r["question"]) > 50 else r["question"]
         print(
-            f"{r['id']:<4} {q_short:<42} "
-            f"{r['bleu']:>6.3f} "
-            f"{r['rouge1']:>6.3f} "
-            f"{r['rouge2']:>6.3f} "
-            f"{r['rougeL']:>6.3f}"
+            f"{r['id']:<4} {q_short:<52} "
+            f"{r['rouge1']:>8.3f} "
+            f"{r['rouge2']:>8.3f}"
         )
 
     print_separator()
@@ -142,17 +120,13 @@ def print_results_table(results: list):
 def print_averages(results: list):
     """Print average scores across all questions."""
     n = len(results)
-    avg_bleu   = sum(r["bleu"]   for r in results) / n
     avg_rouge1 = sum(r["rouge1"] for r in results) / n
     avg_rouge2 = sum(r["rouge2"] for r in results) / n
-    avg_rougeL = sum(r["rougeL"] for r in results) / n
 
-    print(f"\n{'AVERAGE SCORES':^90}")
+    print(f"\n{'AVERAGE SCORES':^75}")
     print_separator()
-    print(f"  BLEU    : {avg_bleu:.4f}")
-    print(f"  ROUGE-1 : {avg_rouge1:.4f}")
-    print(f"  ROUGE-2 : {avg_rouge2:.4f}")
-    print(f"  ROUGE-L : {avg_rougeL:.4f}")
+    print(f"  ROUGE-1 : {avg_rouge1:.4f}  — chevauchement de mots individuels")
+    print(f"  ROUGE-2 : {avg_rouge2:.4f}  — chevauchement de paires de mots")
     print_separator("═")
 
 
@@ -167,6 +141,7 @@ def run_evaluation(use_mock: bool = False):
     print(f"\n  Chatbot Evaluation Pipeline  [{mode} MODE]")
     print_separator("═")
     print(f"  Dataset : {DATASET_PATH}  ({len(dataset)} questions)")
+    print(f"  Metrics : ROUGE-1, ROUGE-2")
     print(f"  Endpoint: {CHATBOT_URL if not use_mock else 'N/A (mock)'}")
     print_separator("═")
 
@@ -190,22 +165,19 @@ def run_evaluation(use_mock: bool = False):
         print(f"  → {response[:100]}{'...' if len(response) > 100 else ''}")
 
         # Compute scores
-        bleu   = compute_bleu(reference, response)
-        rouge  = compute_rouge(reference, response)
+        rouge = compute_rouge(reference, response)
 
         results.append({
             "id":      item["id"],
             "question": question,
-            "bleu":    bleu,
             "rouge1":  rouge["rouge1"],
             "rouge2":  rouge["rouge2"],
-            "rougeL":  rouge["rougeL"],
         })
 
-        print(f"  BLEU={bleu:.3f}  R1={rouge['rouge1']:.3f}  R2={rouge['rouge2']:.3f}  RL={rouge['rougeL']:.3f}")
+        print(f"  ROUGE-1={rouge['rouge1']:.3f}  ROUGE-2={rouge['rouge2']:.3f}")
 
     # Summary table
-    print(f"\n\n{'RESULTS SUMMARY':^90}")
+    print(f"\n\n{'RESULTS SUMMARY':^75}")
     print_results_table(results)
     print_averages(results)
 

@@ -44,62 +44,65 @@ class FeatureExtractor:
     
     def load_historical_data(self, machine_id, start_date, end_date):
         """
-        Load historical metrics from database for a specific machine
-        
-        Args:
-            machine_id: Machine ID (integer)
-            start_date: Start datetime
-            end_date: End datetime
-            
-        Returns:
-            tuple: (system_metrics_df, smart_data_df)
+        Load historical metrics from database for a specific machine.
+        Limits to 1000 most recent rows per table to avoid loading massive datasets.
         """
         try:
-            # Load system metrics
+            # Load system metrics — capped at 1000 most recent rows
             system_query = """
-                SELECT 
-                    created_at as timestamp,
-                    cpu_usage,
-                    memory_usage,
-                    disk_usage
-                FROM system_metrics
-                WHERE machine_id = %s
-                    AND created_at >= %s
-                    AND created_at <= %s
-                ORDER BY created_at ASC
+                SELECT timestamp, cpu_usage, memory_usage, disk_usage
+                FROM (
+                    SELECT
+                        created_at as timestamp,
+                        cpu_usage,
+                        memory_usage,
+                        disk_usage
+                    FROM system_metrics
+                    WHERE machine_id = %s
+                        AND created_at >= %s
+                        AND created_at <= %s
+                    ORDER BY created_at DESC
+                    LIMIT 1000
+                ) sub
+                ORDER BY timestamp ASC
             """
-            
+
             system_df = pd.read_sql_query(
                 system_query,
                 self.conn,
                 params=(machine_id, start_date, end_date)
             )
-            
-            # Load SMART data
+
+            # Load SMART data — capped at 1000 most recent rows
             smart_query = """
-                SELECT 
-                    created_at as timestamp,
-                    health_status,
-                    temperature,
-                    read_errors,
-                    write_errors
-                FROM smart_data
-                WHERE machine_id = %s
-                    AND created_at >= %s
-                    AND created_at <= %s
-                ORDER BY created_at ASC
+                SELECT timestamp, health_status, temperature, read_errors, write_errors
+                FROM (
+                    SELECT
+                        created_at as timestamp,
+                        health_status,
+                        temperature,
+                        read_errors,
+                        write_errors
+                    FROM smart_data
+                    WHERE machine_id = %s
+                        AND created_at >= %s
+                        AND created_at <= %s
+                    ORDER BY created_at DESC
+                    LIMIT 1000
+                ) sub
+                ORDER BY timestamp ASC
             """
-            
+
             smart_df = pd.read_sql_query(
                 smart_query,
                 self.conn,
                 params=(machine_id, start_date, end_date)
             )
-            
+
             logger.info(f"Loaded {len(system_df)} system metrics and {len(smart_df)} SMART records for machine {machine_id}")
-            
+
             return system_df, smart_df
-            
+
         except Exception as e:
             logger.error(f"Failed to load historical data: {e}")
             raise

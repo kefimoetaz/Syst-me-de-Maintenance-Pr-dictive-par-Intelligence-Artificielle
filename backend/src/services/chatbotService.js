@@ -274,6 +274,10 @@ const KNOWLEDGE_BASE = {
   graphiques: {
     keywords: ['graphiques de santé', 'interpréter les graphiques', 'graphiques', 'santé système'],
     answer: 'Les graphiques de santé système montrent l\'évolution des métriques CPU, RAM et disque dans le temps. Une tendance à la hausse prolongée indique une dégradation et un risque de panne accru.'
+  },
+  evaluation_rouge: {
+    keywords: ['rouge', 'rouge-1', 'rouge-2', 'évaluation du chatbot', 'score du chatbot', 'performance du chatbot', 'résultats évaluation', 'évaluation nlp'],
+    answer: 'Le chatbot a été évalué sur 20 questions avec les métriques ROUGE. Résultats obtenus : ROUGE-1 = 0.4548 (chevauchement de mots individuels) et ROUGE-2 = 0.3043 (chevauchement de paires de mots). Ces scores indiquent une bonne correspondance conceptuelle entre les réponses du chatbot et les références.'
   }
 };
 

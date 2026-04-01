@@ -1,64 +1,10 @@
-import { ComputerDesktopIcon, CpuChipIcon, CheckCircleIcon, ExclamationTriangleIcon } from './Icons'
+import { ComputerDesktopIcon } from './Icons'
 
 export default function MachineList({ machines, onSelectMachine, selectedMachine }) {
-  const getStatusColor = (status) => {
-    return status === 'online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-  }
-
-  const getHealthColor = (health) => {
-    switch (health) {
-      case 'GOOD': return 'text-green-600'
-      case 'WARNING': return 'text-yellow-600'
-      case 'CRITICAL': return 'text-red-600'
-      default: return 'text-gray-600'
-    }
-  }
-
   const getUsageColor = (usage) => {
     if (usage >= 90) return 'text-red-400 font-bold'
     if (usage >= 80) return 'text-yellow-400 font-semibold'
     return 'text-green-400'
-  }
-
-  // Get risk level color and styling from ML prediction
-  const getRiskLevelStyle = (riskLevel) => {
-    switch (riskLevel) {
-      case 'CRITICAL':
-        return { 
-          color: 'text-red-400 font-bold', 
-          bg: 'bg-red-500/20',
-          label: 'Critique',
-          showIcon: false
-        }
-      case 'HIGH':
-        return { 
-          color: 'text-orange-400 font-bold', 
-          bg: 'bg-orange-500/20',
-          label: 'Élevé',
-          showIcon: false
-        }
-      case 'MEDIUM':
-        return { 
-          color: 'text-yellow-400 font-semibold', 
-          bg: 'bg-yellow-500/20',
-          label: 'Moyen',
-          showIcon: false
-        }
-      case 'LOW':
-        return { 
-          color: 'text-green-400', 
-          bg: 'bg-green-500/20',
-          label: 'Faible',
-          showIcon: false
-        }
-      default:
-        return { 
-          color: 'text-gray-400', 
-          bg: 'bg-gray-500/20',
-          label: 'N/A',
-          showIcon: false
-        }
-    }
   }
 
   const calculateHealthScore = (machine) => {
@@ -73,24 +19,37 @@ export default function MachineList({ machines, onSelectMachine, selectedMachine
   }
 
   const calculateRisk = (machine) => {
-    // Use LSTM prediction if available
-    if (machine.lstmPrediction && machine.lstmPrediction.risk_level) {
-      return getRiskLevelStyle(machine.lstmPrediction.risk_level)
+    // Use RF prediction risk_level if available
+    if (machine.prediction && machine.prediction.risk_level) {
+      const riskMap = {
+        CRITICAL: { label: 'Critique', color: 'text-red-400 font-bold',    bg: 'bg-red-500/20',    showIcon: true  },
+        HIGH:     { label: 'Élevé',    color: 'text-orange-400 font-bold', bg: 'bg-orange-500/20', showIcon: false },
+        MEDIUM:   { label: 'Moyen',    color: 'text-yellow-400 font-semibold', bg: 'bg-yellow-500/20', showIcon: false },
+        LOW:      { label: 'Faible',   color: 'text-green-400',            bg: 'bg-green-500/20',  showIcon: false },
+      }
+      return riskMap[machine.prediction.risk_level] || { label: 'N/A', color: 'text-gray-400', bg: 'bg-gray-500/20', showIcon: false }
     }
     
-    // Fallback to heuristic calculation
+    // Fallback to heuristic
     const cpu = parseFloat(machine.cpu_usage)
     const memory = parseFloat(machine.memory_usage)
     const disk = parseFloat(machine.disk_usage)
     const maxUsage = Math.max(cpu, memory, disk)
 
     if (maxUsage >= 90 || machine.health_status === 'CRITICAL') {
-      return { level: 'Élevé', color: 'text-red-400 font-bold', showIcon: true }
+      return { label: 'Élevé', color: 'text-red-400 font-bold', bg: 'bg-red-500/20', showIcon: true }
     }
     if (maxUsage >= 80 || machine.health_status === 'WARNING') {
-      return { level: 'Moyen', color: 'text-yellow-400 font-semibold', showIcon: false }
+      return { label: 'Moyen', color: 'text-yellow-400 font-semibold', bg: 'bg-yellow-500/20', showIcon: false }
     }
-    return { level: 'Faible', color: 'text-green-400', showIcon: false }
+    return { label: 'Faible', color: 'text-green-400', bg: 'bg-green-500/20', showIcon: false }
+  }
+
+  const getProbaColor = (proba) => {
+    if (proba >= 70) return 'text-red-400 font-bold'
+    if (proba >= 50) return 'text-orange-400 font-semibold'
+    if (proba >= 30) return 'text-yellow-400'
+    return 'text-green-400'
   }
 
   return (
@@ -123,10 +82,10 @@ export default function MachineList({ machines, onSelectMachine, selectedMachine
                 Score Santé
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">
-                Risque Panne
+                Proba. Panne (RF)
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">
-                Proba. Panne
+                Santé Disque (LSTM)
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">
                 Action
@@ -135,7 +94,6 @@ export default function MachineList({ machines, onSelectMachine, selectedMachine
           </thead>
           <tbody className="divide-y divide-white/10">
             {machines.map((machine) => {
-              const risk = calculateRisk(machine)
               const healthScore = calculateHealthScore(machine)
               
               return (
@@ -187,14 +145,14 @@ export default function MachineList({ machines, onSelectMachine, selectedMachine
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      {risk.showIcon && (
-                        <ExclamationTriangleIcon className="w-5 h-5 text-red-400 animate-pulse" />
-                      )}
-                      <span className={`text-sm ${risk.color} ${risk.bg} px-2 py-1 rounded`}>
-                        {risk.label || risk.level}
+                    {machine.prediction && machine.prediction.failure_probability_30d != null && machine.prediction.failure_probability_30d > 0 ? (
+                      <span className={`text-sm ${getProbaColor(machine.prediction.failure_probability_30d)}`}>
+                        {parseFloat(machine.prediction.failure_probability_30d).toFixed(1)}%
+                        <span className="text-xs text-gray-400 ml-1">/ 30j</span>
                       </span>
-                    </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">N/A</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {machine.lstmPrediction && machine.lstmPrediction.prediction !== null ? (

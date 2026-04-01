@@ -170,11 +170,9 @@ export default function Chatbot() {
       <div className="mx-3 mt-2 mb-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1">
           <span className="text-xs font-semibold text-white/70 mr-2">📊</span>
-          <span className="text-xs text-gray-400">BLEU <span className="text-purple-300 font-semibold">0.73</span></span>
+          <span className="text-xs text-gray-400">ROUGE-1 <span className="text-purple-300 font-semibold">0.4548</span></span>
           <span className="text-white/20 mx-1">·</span>
-          <span className="text-xs text-gray-400">ROUGE-L <span className="text-indigo-300 font-semibold">0.76</span></span>
-          <span className="text-white/20 mx-1">·</span>
-          <span className="text-xs text-gray-400">Score <span className="text-green-400 font-semibold">0.74</span></span>
+          <span className="text-xs text-gray-400">ROUGE-2 <span className="text-indigo-300 font-semibold">0.3043</span></span>
         </div>
         <span className="text-xs text-white/25">20 q.</span>
       </div>
